@@ -47,26 +47,26 @@
         
         .buttons-container {
             position: relative;
-            height: 140px; /* Reduced from 160px */
+            height: 140px;
             margin-bottom: 25px;
             overflow: hidden;
             border: 2px dashed #ff9a9e;
             border-radius: 15px;
             background: #fff9fb;
-            touch-action: none;
         }
         
         .btn {
-            padding: 14px 35px; /* Reduced from 18px 50px */
-            font-size: 18px; /* Reduced from 22px */
+            padding: 14px 35px;
+            font-size: 18px;
             font-weight: bold;
             border: none;
-            border-radius: 10px; /* Slightly smaller radius */
+            border-radius: 10px;
             cursor: pointer;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
             transition: all 0.2s ease;
             user-select: none;
             -webkit-user-select: none;
+            touch-action: manipulation;
         }
         
         .btn-yes {
@@ -79,9 +79,9 @@
             z-index: 10;
         }
         
-        .btn-yes:active {
+        .btn-yes:active, .btn-yes:hover {
             background: #45a049;
-            transform: translateY(-50%) scale(0.98);
+            transform: translateY(-50%) scale(1.05);
         }
         
         .btn-no {
@@ -90,7 +90,6 @@
             position: absolute;
             transition: left 0.3s ease, top 0.3s ease;
             z-index: 5;
-            touch-action: none;
         }
         
         .btn-no:active {
@@ -148,12 +147,12 @@
             }
             
             .buttons-container {
-                height: 120px; /* Smaller on mobile */
+                height: 120px;
             }
             
             .btn {
-                padding: 12px 30px; /* Smaller on mobile */
-                font-size: 16px; /* Smaller text on mobile */
+                padding: 12px 30px;
+                font-size: 16px;
             }
             
             .btn-yes {
@@ -175,7 +174,7 @@
         
         @media (max-width: 480px) {
             .btn {
-                padding: 10px 25px; /* Even smaller on very small phones */
+                padding: 10px 25px;
                 font-size: 16px;
             }
             
@@ -216,6 +215,9 @@
             const comment = document.getElementById('comment');
             const result = document.getElementById('result');
             const buttonsContainer = document.getElementById('buttonsContainer');
+            
+            // Check if mobile device
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             
             // Get container dimensions
             let containerRect = buttonsContainer.getBoundingClientRect();
@@ -305,7 +307,7 @@
             
             // ===== DESKTOP (Mouse) Events =====
             buttonsContainer.addEventListener('mousemove', function(e) {
-                if (isTouching) return; // Don't process mouse events during touch
+                if (isTouching) return;
                 
                 const rect = buttonsContainer.getBoundingClientRect();
                 const mouseX = e.clientX - rect.left;
@@ -339,8 +341,10 @@
             });
             
             // ===== MOBILE (Touch) Events =====
-            buttonsContainer.addEventListener('touchstart', function(e) {
+            // FOR NO BUTTON
+            noBtn.addEventListener('touchstart', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 isTouching = true;
                 
                 const touch = e.touches[0];
@@ -348,19 +352,8 @@
                 const touchX = touch.clientX - rect.left;
                 const touchY = touch.clientY - rect.top;
                 
-                // Check if touch is near NO button
-                const btnCenterX = currentX + btnWidth/2;
-                const btnCenterY = currentY + btnHeight/2;
-                
-                const distance = Math.sqrt(
-                    Math.pow(touchX - btnCenterX, 2) + 
-                    Math.pow(touchY - btnCenterY, 2)
-                );
-                
-                // Move if finger is within 120px of button
-                if (distance < 120) {
-                    moveNoButton(touchX, touchY);
-                }
+                // Immediately move away on touch
+                moveNoButton(touchX, touchY);
                 
                 lastX = touchX;
                 lastY = touchY;
@@ -390,8 +383,8 @@
                         Math.pow(touchY - btnCenterY, 2)
                     );
                     
-                    // Move if finger gets within 100px
-                    if (distanceToButton < 100) {
+                    // Move if finger gets within 80px
+                    if (distanceToButton < 80) {
                         moveNoButton(touchX, touchY);
                     }
                 }
@@ -404,13 +397,7 @@
                 isTouching = false;
             });
             
-            // Prevent context menu on long press
-            buttonsContainer.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                return false;
-            });
-            
-            // Move on click attempt (both mobile and desktop)
+            // Move on click attempt (desktop)
             noBtn.addEventListener('mousedown', function(e) {
                 e.preventDefault();
                 const rect = buttonsContainer.getBoundingClientRect();
@@ -422,8 +409,18 @@
                 setTimeout(() => moveNoButton(x, y), 100);
             });
             
-            // YES button click
-            yesBtn.addEventListener('click', function() {
+            // ===== YES BUTTON FIX =====
+            // Use both click and touch events for maximum compatibility
+            yesBtn.addEventListener('click', handleYesClick);
+            yesBtn.addEventListener('touchend', handleYesClick);
+            
+            function handleYesClick(e) {
+                // Prevent default for touch events
+                if (e.type === 'touchend') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                
                 // Update YES button
                 yesBtn.textContent = 'YAY! 💖';
                 yesBtn.style.background = '#ff4d7e';
@@ -438,9 +435,13 @@
                 noBtn.style.opacity = '0.6';
                 noBtn.style.cursor = 'default';
                 
+                // Remove event listeners to prevent multiple clicks
+                yesBtn.removeEventListener('click', handleYesClick);
+                yesBtn.removeEventListener('touchend', handleYesClick);
+                
                 // Create celebration
                 createHearts();
-            });
+            }
             
             // Create falling hearts celebration
             function createHearts() {
@@ -478,6 +479,11 @@
             
             // Initialize dimensions
             updateDimensions();
+            
+            // Add a mobile-specific message
+            if (isMobile) {
+                comment.textContent = '"No" is very shy on mobile! Try to catch it! 😉';
+            }
         });
     </script>
 </body>
